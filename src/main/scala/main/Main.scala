@@ -6,8 +6,8 @@ import akka.actor._
 
 object Main extends App{
 
-    println("How many chairs before start? ")
-    val total = readInt().ensuring(_ > 1)
+    println("How many chairs before start? (2-12) ")
+    val total = readInt().ensuring(i => i > 1 && i < 12)
     println("Got it.")
 
     val system = ActorSystem("MusicalChairs")

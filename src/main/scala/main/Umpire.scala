@@ -2,15 +2,14 @@ package main
 
 import akka.actor.{Props, Actor}
 
-import Umpire.{Success, _}
+import Umpire._
 
 object Umpire {
   case class Prepare(i: Int)
   case object Start
   case object Stop
-  case object Ready
-  case object Acquire
-  case object Success
+  case class Ready(round: Int)
+  case class Acquire(round: Int)
   case class Failed(round: Int)
 }
 
@@ -30,7 +29,7 @@ class Umpire extends Actor{
       chairs = i
       available = chairs
       val players = AllPlayers.take( if (i > AllPlayers.length - 1) AllPlayers.length else i + 1)
-      println(players.mkString(", ") + "have join the game.")
+      println(players.mkString(", ") + " have join the game.")
       players.foreach( p => context.actorOf(Props(classOf[Player]), p))
     }
 
@@ -39,55 +38,45 @@ class Umpire extends Actor{
       round = round + 1
       if (round <= chairs){
         println("Round " + round + ", Go!")
-        context.children.foreach(_ ! Ready)
+        context.children.foreach(_ ! Ready(round))
       }
     }
 
-    case Stop => {
-      context.stop(self)
-    }
+    case Acquire(r) => available match {
 
-    case Acquire => available match {
-
-      case i if i > 1 => {
+      case i if i > 1 && r == round => {
         available = available - 1
-        sender() ! Success
       }
-      case 1 => {
+      case 1 if r == round => {
         available = 0
         if (round == chairs) {
           println("We have a winner! " + sender().path.name)
-          self ! Stop
         } else {
           self ! Start
         }
       }
       case _ => {
-        sender() ! Failed(round) // FIXME: round is not thread safe
+        sender() ! Failed(r)
       }
     }
   }
-
-
 }
-
 
 class Player extends Actor {
 
   var out = false
   def receive = {
-    case Ready => {
+    case Ready(i) => {
       if (!out){
         Thread.sleep(500)
-        sender() ! Acquire
+        sender() ! Acquire(i)
       }
     }
-    case Success => {
-//      println(self.path.name + " got a chair")
-    }
     case Failed(i) => {
-      println(self.path.name + " is out of the game in round " + i)
-      out = true
+      if (!out){
+        println(self.path.name + " is out of the game in round " + i)
+        out = true
+      }
     }
   }
 
