@@ -1,13 +1,12 @@
 package main
 
 import akka.actor.{Props, Actor}
-
 import Umpire._
+import scala.util.Random
 
 object Umpire {
-  case class Prepare(i: Int)
+  case class Prepare(chairs: Int)
   case object Start
-  case object Stop
   case class Ready(round: Int)
   case class Acquire(round: Int)
   case class Failed(round: Int)
@@ -33,6 +32,8 @@ class Umpire extends Actor{
       players.foreach( p => context.actorOf(Props(classOf[Player]), p))
     }
 
+    /** Start each round
+      */
     case Start => {
       available = chairs - round
       round = round + 1
@@ -42,11 +43,17 @@ class Umpire extends Actor{
       }
     }
 
+    /** One of the player requests acquiring a chair
+      * Note: Acquire(r) -> r is like a token to mark the corresponding round that the players are in,
+      * if not match current round, failed the player directly
+      */
     case Acquire(r) => available match {
 
+      // Plenty of Seats!
       case i if i > 1 && r == round => {
         available = available - 1
       }
+      // Last Seat!
       case 1 if r == round => {
         available = 0
         if (round == chairs) {
@@ -55,6 +62,7 @@ class Umpire extends Actor{
           self ! Start
         }
       }
+      // No seats! You're out!
       case _ => {
         sender() ! Failed(r)
       }
@@ -68,7 +76,7 @@ class Player extends Actor {
   def receive = {
     case Ready(i) => {
       if (!out){
-        Thread.sleep(500)
+        Thread.sleep(Random.nextInt(1000))
         sender() ! Acquire(i)
       }
     }
