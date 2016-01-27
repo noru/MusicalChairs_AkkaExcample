@@ -61,10 +61,9 @@ class Umpire extends Actor{
         } else {
           self ! Start
         }
-
       }
       case _ => {
-        sender() ! Failed(round)
+        sender() ! Failed(round) // FIXME: round is not thread safe
       }
     }
   }
