@@ -6,7 +6,7 @@ import akka.actor._
 
 object Main extends App{
 
-    println("How many chairs before start? (2-12) ")
+    println("How many chairs before start? (2-11) ")
     val total = readInt().ensuring(i => i > 1 && i < 12)
     println("Got it.")
 
@@ -15,7 +15,7 @@ object Main extends App{
     umpire ! Prepare(total)
 
     Thread.sleep(1000)
-    println("game starts in ... ")
+    println("Game starts in ... ")
     (0 to 3).reverse.foreach(i => {
       println(i + " ")
       Thread.sleep(1000)

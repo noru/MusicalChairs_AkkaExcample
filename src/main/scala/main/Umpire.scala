@@ -10,6 +10,7 @@ object Umpire {
   case class Ready(round: Int)
   case class Acquire(round: Int)
   case class Failed(round: Int)
+  case class Pass(round: Int)
 }
 
 class Umpire extends Actor{
@@ -52,10 +53,12 @@ class Umpire extends Actor{
       // Plenty of Seats!
       case i if i > 1 && r == round => {
         available = available - 1
+        sender() ! Pass(r)
       }
       // Last Seat!
       case 1 if r == round => {
         available = 0
+        sender() ! Pass(r)
         if (round == chairs) {
           println("We have a winner! " + sender().path.name)
         } else {
@@ -73,12 +76,18 @@ class Umpire extends Actor{
 class Player extends Actor {
 
   var out = false
+  var busy = false
   def receive = {
     case Ready(i) => {
-      if (!out){
+      if (!out && !busy){
         Thread.sleep(Random.nextInt(1000))
         sender() ! Acquire(i)
+        busy = true
       }
+    }
+    case Pass(r) => {
+      busy = false
+//      println(self.path.name + " got a chair in round " + r)
     }
     case Failed(i) => {
       if (!out){
