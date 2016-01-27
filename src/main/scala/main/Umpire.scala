@@ -15,9 +15,9 @@ object Umpire {
 
 class Umpire extends Actor{
 
-  var chairs = 0
-  var round = 0
-  var available = 0
+  var TotalChairs = 0
+  var Round = 0
+  var AvailableChairs = 0
 
   val AllPlayers = Vector("John", "Mike", "Sarah", "Amy", "Carry", "Sam", "Dick", "Fred", "Cam", "Fiona", "Steve", "Chris")
 
@@ -26,8 +26,8 @@ class Umpire extends Actor{
     /** Setup initial state for the game: chairs, player actors
       */
     case Prepare(i) => {
-      chairs = i
-      available = chairs
+      TotalChairs = i
+      AvailableChairs = TotalChairs
       val players = AllPlayers.take( if (i > AllPlayers.length - 1) AllPlayers.length else i + 1)
       println(players.mkString(", ") + " have join the game.")
       players.foreach( p => context.actorOf(Props(classOf[Player]), p))
@@ -36,11 +36,11 @@ class Umpire extends Actor{
     /** Start each round
       */
     case Start => {
-      available = chairs - round
-      round = round + 1
-      if (round <= chairs){
-        println("Round " + round + ", Go!")
-        context.children.foreach(_ ! Ready(round))
+      AvailableChairs = TotalChairs - Round
+      Round = Round + 1
+      if (Round <= TotalChairs){
+        println("Round " + Round + ", Go!")
+        context.children.foreach(_ ! Ready(Round))
       }
     }
 
@@ -48,18 +48,18 @@ class Umpire extends Actor{
       * Note: Acquire(r) -> r is like a token to mark the corresponding round that the players are in,
       * if not match current round, failed the player directly
       */
-    case Acquire(r) => available match {
+    case Acquire(r) => AvailableChairs match {
 
       // Plenty of Seats!
-      case i if i > 1 && r == round => {
-        available = available - 1
+      case i if i > 1 && r == Round => {
+        AvailableChairs = AvailableChairs - 1
         sender() ! Pass(r)
       }
       // Last Seat!
-      case 1 if r == round => {
-        available = 0
+      case 1 if r == Round => {
+        AvailableChairs = 0
         sender() ! Pass(r)
-        if (round == chairs) {
+        if (Round == TotalChairs) {
           println("We have a winner! " + sender().path.name)
         } else {
           self ! Start
