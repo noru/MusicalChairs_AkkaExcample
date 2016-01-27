@@ -11,7 +11,7 @@ object Umpire {
   case object Ready
   case object Acquire
   case object Success
-  case object Failed
+  case class Failed(round: Int)
 }
 
 class Umpire extends Actor{
@@ -24,11 +24,13 @@ class Umpire extends Actor{
 
   def receive = {
 
+    /** Setup initial state for the game: chairs, player actors
+      */
     case Prepare(i) => {
       chairs = i
       available = chairs
       val players = AllPlayers.take( if (i > AllPlayers.length - 1) AllPlayers.length else i + 1)
-      println(players.mkString(", ") + " join the game.")
+      println(players.mkString(", ") + "have join the game.")
       players.foreach( p => context.actorOf(Props(classOf[Player]), p))
     }
 
@@ -57,14 +59,12 @@ class Umpire extends Actor{
           println("We have a winner! " + sender().path.name)
           self ! Stop
         } else {
-          available = chairs - round
-          Thread.sleep(2000)
           self ! Start
         }
 
       }
       case _ => {
-        sender() ! Failed
+        sender() ! Failed(round)
       }
     }
   }
@@ -75,20 +75,20 @@ class Umpire extends Actor{
 
 class Player extends Actor {
 
+  var out = false
   def receive = {
     case Ready => {
-      Thread.sleep(500)
-      sender() ! Acquire
+      if (!out){
+        Thread.sleep(500)
+        sender() ! Acquire
+      }
     }
     case Success => {
-      println(self.path.name + " got a chair")
+//      println(self.path.name + " got a chair")
     }
-    case Failed => {
-      println(self.path.name + " is out of the game.")
-      self ! Stop
-    }
-    case Stop => {
-      context.stop(self)
+    case Failed(i) => {
+      println(self.path.name + " is out of the game in round " + i)
+      out = true
     }
   }
 
